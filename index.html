@@ -57,4 +57,120 @@ function initGame() {
 
 function startGame() {
   initGame();
-  startScreen
+  startScreen.classList.add('hidden');
+  gameOverScreen.classList.add('hidden');
+  gameRunning = true;
+  startSpawning();
+}
+
+function endGame() {
+  if (!gameRunning) return;
+  gameRunning = false;
+  stopSpawning();
+  finalScoreEl.textContent = 'Score: ' + score;
+  gameOverScreen.classList.remove('hidden');
+}
+
+function startSpawning() {
+  stopSpawning();
+  spawnTimer = setInterval(() => {
+    if (!gameRunning) return;
+    enemies.push({
+      x: Math.random() * (canvas.width - 30),
+      y: 0,
+      width: 30,
+      height: 30,
+      speed: 1.8 + Math.random() * 1.6
+    });
+  }, 1100);
+}
+
+function stopSpawning() {
+  if (spawnTimer) clearInterval(spawnTimer);
+  spawnTimer = null;
+}
+
+// Controls
+window.addEventListener('keydown', e => keys[e.key] = true);
+window.addEventListener('keyup', e => keys[e.key] = false);
+
+window.addEventListener('keydown', e => {
+  if (e.code === 'Space' && gameRunning) {
+    bullets.push({ x: player.x + 18, y: player.y, width: 5, height: 10 });
+  }
+});
+
+function update() {
+  if (!gameRunning) return;
+
+  if (keys['ArrowLeft'] && player.x > 0) player.x -= player.speed;
+  if (keys['ArrowRight'] && player.x < canvas.width - player.width) player.x += player.speed;
+
+  for (let i = bullets.length - 1; i >= 0; i--) {
+    const b = bullets[i];
+    b.y -= 6;
+    if (b.y < 0) bullets.splice(i, 1);
+  }
+
+  for (let i = enemies.length - 1; i >= 0; i--) {
+    const e = enemies[i];
+    e.y += e.speed;
+
+    if (e.y > canvas.height) {
+      endGame();
+      return;
+    }
+  }
+
+  for (let ei = enemies.length - 1; ei >= 0; ei--) {
+    const e = enemies[ei];
+    for (let bi = bullets.length - 1; bi >= 0; bi--) {
+      const b = bullets[bi];
+      if (
+        b.x < e.x + e.width &&
+        b.x + b.width > e.x &&
+        b.y < e.y + e.height &&
+        b.y + b.height > e.y
+      ) {
+        enemies.splice(ei, 1);
+        bullets.splice(bi, 1);
+        score++;
+        break;
+      }
+    }
+  }
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (!gameRunning) return;
+
+  ctx.fillStyle = 'blue';
+  ctx.fillRect(player.x, player.y, player.width, player.height);
+
+  ctx.fillStyle = 'yellow';
+  bullets.forEach(b => ctx.fillRect(b.x, b.y, b.width, b.height));
+
+  ctx.fillStyle = 'red';
+  enemies.forEach(e => ctx.fillRect(e.x, e.y, e.width, e.height));
+
+  ctx.fillStyle = 'white';
+  ctx.font = '18px Arial';
+  ctx.fillText('Score: ' + score, 10, 20);
+}
+
+function gameLoop() {
+  update();
+  draw();
+  requestAnimationFrame(gameLoop);
+}
+
+startBtn.addEventListener('click', startGame);
+restartBtn.addEventListener('click', startGame);
+
+gameLoop();
+</script>
+
+</body>
+</html>
